@@ -76,7 +76,7 @@ function matrixControls() {
       <label><span class="sr-only">Matrix entry c</span><input data-entry="c" type="number" step="0.05" value="0.12"></label>
       <label><span class="sr-only">Matrix entry d</span><input data-entry="d" type="number" step="0.05" value="1"></label>
     </div></div></div>
-    <div class="live-values"><div><span>det(A)</span><strong id="det-value">0.90</strong></div><div><span>rank(A)</span><strong id="rank-value">2</strong></div><div><span>Av</span><strong id="vector-value">(0, 0)</strong></div></div>
+    <div class="live-values"><div class="wide-value"><span>A(t) / CURRENT MAP</span><strong id="current-matrix"></strong></div><div><span>det(A(t))</span><strong id="det-value">0.90</strong></div><div><span>rank(A(t))</span><strong id="rank-value">2</strong></div><div><span>A(t)v</span><strong id="vector-value">(0, 0)</strong></div></div>
   </div>
   <div class="lab-control-block"><div class="control-heading"><span>02 / TRANSFORM</span><span>CHOOSE A BEHAVIOR</span></div><div class="preset-grid">${Object.keys(presets).map(name => `<button class="preset-button" data-preset="${name}">${name}<span>↗</span></button>`).join('')}</div></div>
   <div class="lab-control-block"><div class="control-heading"><span>03 / ANIMATION</span><span>A(t) = (1 − t)I + tA</span></div><div class="transport"><button id="play-button" aria-label="Play animation">▶</button><button id="pause-button" aria-label="Pause animation">Ⅱ</button><button id="reset-button" aria-label="Reset animation">↺</button><input id="time-scrub" type="range" min="0" max="1" step="0.001" value="1" aria-label="Transformation progress"><span id="time-value">100%</span></div></div>`;
@@ -106,7 +106,7 @@ function renderLesson(id: LessonId) {
       const area = u.x * w.y - u.y * w.x;
       document.querySelector('#span-u')!.textContent = `(${fixed(u.x)}, ${fixed(u.y)})`;
       document.querySelector('#span-w')!.textContent = `(${fixed(w.x)}, ${fixed(w.y)})`;
-      document.querySelector('#span-dim')!.textContent = Math.abs(area) < 0.025 ? '1' : '2';
+      document.querySelector('#span-dim')!.textContent = String(rank({ a: u.x, b: w.x, c: u.y, d: w.y }));
       document.querySelector('#span-area')!.textContent = fixed(area);
     });
     app.querySelectorAll<HTMLButtonElement>('[data-span-preset]').forEach(button => button.addEventListener('click', () => scene.setPreset(button.dataset.spanPreset!)));
@@ -120,6 +120,7 @@ function renderLesson(id: LessonId) {
       const A = scene.state.target;
       const current = { a: 1 + (A.a - 1) * scene.state.t, b: A.b * scene.state.t, c: A.c * scene.state.t, d: 1 + (A.d - 1) * scene.state.t };
       inputs.forEach((input, i) => { if (document.activeElement !== input) input.value = fixed(A[entries[i]]); });
+      document.querySelector('#current-matrix')!.textContent = `[${fixed(current.a)}  ${fixed(current.b)} ; ${fixed(current.c)}  ${fixed(current.d)}]`;
       document.querySelector('#det-value')!.textContent = fixed(det(current));
       document.querySelector('#rank-value')!.textContent = String(rank(current));
       const image = apply(current, scene.state.vector);
@@ -137,7 +138,12 @@ function renderLesson(id: LessonId) {
       scene.setMatrix({ a: values[0], b: values[1], c: values[2], d: values[3] }, false);
     }));
     app.querySelectorAll<HTMLButtonElement>('[data-preset]').forEach(button => button.addEventListener('click', () => scene.setMatrix(presets[button.dataset.preset!])));
-    app.querySelector<HTMLButtonElement>('#play-button')!.addEventListener('click', () => { scene.state.t = 0; scene.state.playing = true; scene.render(); });
+    app.querySelector<HTMLButtonElement>('#play-button')!.addEventListener('click', () => {
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      scene.state.t = reduced ? 1 : 0;
+      scene.state.playing = !reduced;
+      scene.render();
+    });
     app.querySelector<HTMLButtonElement>('#pause-button')!.addEventListener('click', () => { scene.state.playing = false; scene.render(); });
     app.querySelector<HTMLButtonElement>('#reset-button')!.addEventListener('click', () => { scene.state.playing = false; scene.state.t = 0; scene.render(); });
     app.querySelector<HTMLInputElement>('#time-scrub')!.addEventListener('input', event => { scene.state.playing = false; scene.state.t = Number((event.target as HTMLInputElement).value); scene.render(); });

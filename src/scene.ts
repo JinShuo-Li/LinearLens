@@ -56,6 +56,9 @@ export function mountScene(host: HTMLElement, options: {
   </defs><g class="scene-content" clip-path="url(#scene-clip)"></g></svg>`;
   const svg = host.querySelector('svg')!;
   const content = svg.querySelector('.scene-content')!;
+  const adjustView = () => svg.setAttribute('viewBox', !options.home && window.innerWidth <= 700 ? '220 70 560 500' : '0 0 1000 640');
+  adjustView();
+  window.addEventListener('resize', adjustView);
   let drag: 'vector' | 'e1' | 'e2' | null = null;
   let frame = 0;
   let lastTime = 0;
@@ -167,6 +170,6 @@ export function mountScene(host: HTMLElement, options: {
       state.playing = state.t === 0;
       render();
     },
-    destroy() { cancelAnimationFrame(frame); },
+    destroy() { cancelAnimationFrame(frame); window.removeEventListener('resize', adjustView); },
   };
 }
